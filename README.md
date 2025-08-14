@@ -5,6 +5,17 @@ AI train model for guess the next word
 2) download a books: python  download_book.py
 3) Start train model: python train.py <dir>
 
+Add support delete work from model:
+```
+python train.py remove к цгавмф   
+Связь 'к -> цгавмф' успешно удалена
+
+python train.py remove цглвмф
+Слово 'цглвмф' и все его связи успешно удалены
+```
+
+
+
 
 Out:
 ```
