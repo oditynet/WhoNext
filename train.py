@@ -15,6 +15,35 @@ class SelfLearningWordPredictor:
         self.error_history = []
         self.processed_files = set()  # Множество для хранения обработанных файлов
         
+    def remove_word(self, word_to_remove, next_word=None):
+        """
+        Удаляет слово или связь между словами из модели
+        
+        Параметры:
+        - word_to_remove: слово, которое нужно удалить или для которого нужно удалить связь
+        - next_word: если указано, удаляет только эту связь, иначе удаляет слово полностью
+        
+        Возвращает:
+        - True если удаление прошло успешно
+        - False если слово не найдено
+        """
+        word_to_remove = word_to_remove.lower()
+        
+        if next_word:
+            next_word = next_word.lower()
+            if word_to_remove in self.word_pairs and next_word in self.word_pairs[word_to_remove]:
+                del self.word_pairs[word_to_remove][next_word]
+                
+                # Если после удаления связей не осталось, удаляем и само слово
+                if not self.word_pairs[word_to_remove]:
+                    del self.word_pairs[word_to_remove]
+                return True
+            return False
+        else:
+            if word_to_remove in self.word_pairs:
+                del self.word_pairs[word_to_remove]
+                return True
+            return False
     def clean_text(self, text):
         text = text.lower()
         text = re.sub(r'[^а-яё\s]', '', text)
@@ -28,7 +57,7 @@ class SelfLearningWordPredictor:
             next_word = words[i+1]
             
             predicted = self._predict(current)
-            #print(f"current = {current} next_word {next_word}")
+            #print(f"predicted {predicted}  current = {current} next_word {next_word}")
             error = 1 if predicted != next_word else 0
             self.error_history.append(error)
             
@@ -42,8 +71,11 @@ class SelfLearningWordPredictor:
             self.learning_rate = max(0.01, min(0.5, avg_error))
     
     def _predict(self, word):
+        #print(self.word_pairs)
         if word not in self.word_pairs or not self.word_pairs[word]:
+        #    print("-")
             return None
+        #print("+")
         return max(self.word_pairs[word].items(), key=lambda x: x[1])[0]
     
     def predict_next_word(self, word, top_n=3):
@@ -155,7 +187,29 @@ def main():
                 print(f"\nТекущая ошибка: {last_error} | Средняя: {avg_error:.1%}")
         else:
             print(f"Слово '{word}' не найдено в модели")
+    elif sys.argv[1] == "remove":
+        if len(sys.argv) < 3:
+            print("Укажите слово: python program.py remove <слово> [следующее_слово]")
+            return
             
+        if not model.load_model():
+            print("Модель не загружена!")
+            return
+            
+        word = sys.argv[2]
+        next_word = sys.argv[3] if len(sys.argv) > 3 else None
+        
+        if model.remove_word(word, next_word):
+            model.save_model()
+            if next_word:
+                print(f"Связь '{word} -> {next_word}' успешно удалена")
+            else:
+                print(f"Слово '{word}' и все его связи успешно удалены")
+        else:
+            if next_word:
+                print(f"Связь '{word} -> {next_word}' не найдена")
+            else:
+                print(f"Слово '{word}' не найдено в модели")
     else:
         directory = sys.argv[1]
         if not os.path.isdir(directory):
